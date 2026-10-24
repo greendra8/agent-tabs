@@ -2,7 +2,7 @@
 
 **Let several AI agents use your real, logged-in Chrome at the same time, in background tabs, without ever stealing your focus.**
 
-agent-tabs is a Chrome extension plus a small local MCP server. Any MCP client (Claude Code, Claude Desktop, Cursor, Codex and others) gets 27 `browser_*` tools. Each agent works in its own collapsed tab group, sees only its own tabs, and never brings Chrome to the front unless you ask it to.
+agent-tabs is a Chrome extension plus a small local MCP server that gives agents 27 `browser_*` tools. It has been tested with Claude Code (CLI and subagents). It's a standard Streamable HTTP MCP server, so other MCP clients should work, but they haven't been tried. Each agent works in its own collapsed tab group, sees only its own tabs, and never brings Chrome to the front unless you ask it to.
 
 > **Not affiliated with Anthropic.** This is an independent, unofficial project. The cursor uses the Claude logo; Claude and the Claude logo are trademarks of Anthropic.
 >
