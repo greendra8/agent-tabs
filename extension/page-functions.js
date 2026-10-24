@@ -414,9 +414,15 @@ export function paymentSignals() {
   const cardField = document.querySelector('input[autocomplete^="cc-"], input[name*="cardnumber" i], input[name*="card_number" i], input[id*="cardnumber" i], input[name*="cvc" i], input[name*="cvv" i]');
   if (cardField) signals.push("card fields");
   const PROVIDERS = /js\.stripe\.com|checkout\.stripe\.com|adyen|klarna|vipps|nets\.eu|netaxept|paypal|braintree|worldpay|checkout\.com|cybersource|payex|nexi|dibs|mollie|swedbank|mobilepay/i;
-  if ([...document.querySelectorAll("iframe[src], form[action]")].some((el) => PROVIDERS.test(el.getAttribute("src") ?? el.getAttribute("action") ?? ""))) {
-    signals.push("payment provider frame");
-  }
+  // Only frames you can see: Stripe.js and PayPal load tiny hidden frames (metrics, controllers)
+  // on every page of sites that take payments, including quizzes long before any checkout.
+  const shown = (el) => {
+    const box = el.getBoundingClientRect();
+    return box.width >= 40 && box.height >= 20 && getComputedStyle(el).visibility !== "hidden";
+  };
+  const providerFrame = [...document.querySelectorAll("iframe[src]")].some((el) => PROVIDERS.test(el.getAttribute("src")) && shown(el));
+  const providerForm = [...document.querySelectorAll("form[action]")].some((el) => PROVIDERS.test(el.getAttribute("action")));
+  if (providerFrame || providerForm) signals.push("payment provider frame");
   // A button that pays or places the order, in a few languages ("Complete payment", "Betal nå",
   // "Place order", "Buy now", "Bestill og betal", "Zahlungspflichtig bestellen").
   const PAY_BUTTON = /\b(pay|payment|betal|betaling|kjøp|purchase|place order|buy now|complete (order|booking)|confirm and pay|book and pay|bestill og betal|fullfør (kjøp|betaling|bestilling)|zahlungspflichtig|jetzt kaufen|payer|paiement)\b/i;
@@ -433,6 +439,12 @@ export function paymentSignals() {
   }
   if (methods.size >= 2) signals.push("payment methods");
   return signals;
+}
+
+// Hides or shows the agent cursor drawn by moveAgentCursor (for screenshots).
+export function setAgentCursorHidden(hidden) {
+  const host = document.getElementById("__agent_tabs_cursor");
+  if (host) host.style.visibility = hidden ? "hidden" : "";
 }
 
 // Draws the agent's cursor so someone watching the tab can follow it, with the agent's name tag

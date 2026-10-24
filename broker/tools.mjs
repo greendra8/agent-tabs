@@ -10,7 +10,7 @@ import { loginsFor, totpFor } from "./bitwarden.mjs";
 export const INSTRUCTIONS = `Agent Tabs drives background tabs in the user's real Chrome (their logged-in profile) without taking focus.
 - Your tabs live in your own collapsed tab group; you can only see and touch tabs you opened (and pages they opened). Other agents and the user's own tabs are invisible to you.
 - Typical loop: browser_open_tab -> browser_snapshot (elements get refs like e12) -> act by ref -> check with a filtered snapshot or a screenshot. Refs reset when the page navigates (action results say navigated: true).
-- Be quick: fill a whole form with ONE browser_fill call (all fields), and chain steps you can already see coming into ONE browser_batch call instead of one call per click. Take a snapshot only when you need new refs or to check a result.
+- Save calls, not effort: fill a whole form with ONE browser_fill call (all fields), and chain steps you can already see coming into ONE browser_batch call instead of one call per click. Take a snapshot only when you need new refs or to check a result. This is about mechanics only: research as broadly as the task needs (several sites, more than the first page of results).
 - Action results say what was clicked but not how the page reacted; check with a filtered snapshot. After a search, wait for the loading indicator to go (browser_wait_for textGone, or networkIdle) rather than for text that is already on the page.
 - Prefer browser_snapshot (cheap, has refs) over screenshots; use browser_get_text for long reading and page through it with offset.
 - Links that open a new tab or popup open as another background tab in your group; the action result says which tab id.

@@ -37,9 +37,11 @@ export const ops = {
 
   async close_tab(sessionId, { tabId }) {
     sessions.requireOwner(sessionId, tabId);
-    await cdp.detach(tabId);
     await sessions.forgetTab(tabId);
+    // Closed while still attached, so a "Leave site?" prompt (checkouts have them) is accepted
+    // by the beforeunload handler instead of leaving the tab open behind it.
     await chrome.tabs.remove(tabId).catch(() => {});
+    cdp.dropState(tabId);
     return { closed: tabId };
   },
 
@@ -126,13 +128,16 @@ export const ops = {
       clip = { x: 0, y: 0, width: content.width, height: Math.min(content.height, 7900) };
       beyondViewport = true;
     }
+    // The agent cursor is for people watching the tab; keep it out of the agent's own screenshots.
+    const hideCursor = st.cursor && !st.dialog;
+    if (hideCursor) await evaluate(st, page.setAgentCursorHidden, [true]).catch(() => {});
     // Capture in CSS pixels: half the size of a Retina capture, and plenty for reading.
     const { data } = await send(
       tabId,
       "Page.captureScreenshot",
       { format, ...(format === "jpeg" ? { quality } : {}), clip: { ...clip, scale: node ? 1 : 1 / ratio } /* element clips with a scale below 1 come back magnified, so they stay at device resolution */, captureBeyondViewport: beyondViewport, fromSurface: true },
       { timeoutMs: 30000 },
-    );
+    ).finally(() => hideCursor && evaluate(st, page.setAgentCursorHidden, [false]).catch(() => {}));
     const tab = await chrome.tabs.get(tabId);
     return { data, mimeType: `image/${format}`, width: Math.round(clip.width), height: Math.round(clip.height), url: cdp.shortUrl(tab.url), title: tab.title, notes: takeNotes(st) };
   },

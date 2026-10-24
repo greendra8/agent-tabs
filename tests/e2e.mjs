@@ -401,6 +401,13 @@ await check("fill_login from (fake) Bitwarden: password never returned; authenti
   }
 });
 
+await check("payment guard: a quiz with Stripe's hidden frame is not a payment page", async () => {
+  const { data } = await agent.call("browser_navigate", { tabId, url: FIXTURE.replace("index.html", "quiz.html") });
+  assert(!data.notes?.some((n) => /checkout or payment page/.test(n)), `quiz flagged as payment page: ${JSON.stringify(data.notes)}`);
+  const click = await agent.call("browser_click", { tabId, text: "Continue" });
+  assert(click.data.title === "Quiz step 2", `Continue click didn't run: ${JSON.stringify(click.data)}`);
+});
+
 await check("payment guard: checkout page is flagged; acting needs allowPayment", async () => {
   const { data } = await agent.call("browser_navigate", { tabId, url: FIXTURE.replace("index.html", "checkout.html") });
   assert(data.notes?.some((n) => /checkout or payment page/.test(n)), `no payment note: ${JSON.stringify(data)}`);
@@ -454,6 +461,16 @@ await check("keep_tab toggles", async () => {
   const kept = await agent.call("browser_keep_tab", { tabId });
   const unkept = await agent.call("browser_keep_tab", { tabId, keep: false });
   assert(kept.data.kept === true && unkept.data.kept === false, "keep flags wrong");
+});
+
+await check("close_tab closes a page with a \"Leave site?\" prompt", async () => {
+  const { data } = await agent.call("browser_open_tab", { url: FIXTURE.replace("index.html", "leave.html") });
+  await agent.call("browser_type", { tabId: data.tabId, selector: "#name", text: "Alex" }); // user activation arms the prompt
+  const started = Date.now();
+  await agent.call("browser_close_tab", { tabId: data.tabId });
+  assert(Date.now() - started < 5000, `close_tab took ${Date.now() - started} ms`);
+  const { data: list } = await agent.call("browser_list_tabs", {});
+  assert(!list.tabs.some((t) => t.tabId === data.tabId), "tab still listed");
 });
 
 await check("closing the session closes all its tabs", async () => {

@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Unsaved form (agent-tabs test)</title></head>
+<body>
+  <!-- Like a checkout: once the user has interacted, leaving asks "Leave site?". -->
+  <input id="name" placeholder="Name">
+  <script>addEventListener("beforeunload", (event) => { event.preventDefault(); event.returnValue = ""; });</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Quiz (agent-tabs test)</title></head>
+<body>
+  <!-- Like BetterMe: Stripe.js's hidden metrics frame on every page of an onboarding quiz. The src
+       only has to look like Stripe's; about:blank keeps the test offline. -->
+  <iframe src="about:blank#js.stripe.com/v3/m-outer-93afeeb.html" style="position:fixed;width:1px;height:1px;border:0;visibility:hidden" title="stripe"></iframe>
+  <h1>How old are you?</h1>
+  <label><input type="radio" name="age" value="18-29"> 18-29</label>
+  <label><input type="radio" name="age" value="30-39"> 30-39</label>
+  <button id="next" onclick="document.title = 'Quiz step 2'">Continue</button>
+</body>
+</html>
