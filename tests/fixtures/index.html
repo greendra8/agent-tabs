@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>agent-tabs fixture</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    section { margin-bottom: 1.5rem; }
+    #log { white-space: pre-wrap; font-family: ui-monospace, monospace; background: #f4f4f4; padding: .5rem; }
+    #drop { width: 160px; height: 60px; border: 2px dashed #888; }
+    #drag { width: 60px; height: 30px; background: #6a5acd; color: white; }
+    #hover-target:hover + #hover-tip, #hover-tip.shown { display: block; }
+    #hover-tip { display: none; }
+    #consent { position: fixed; inset: auto 0 0 0; background: #222; color: white; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>agent-tabs fixture</h1>
+
+  <section>
+    <h2>Links</h2>
+    <a id="same" href="page2.html">Same-tab link</a> ·
+    <a id="blank" href="page2.html?from=blank" target="_blank">Target blank link</a> ·
+    <button id="open" onclick="window.open('page2.html?from=window-open', '_blank', 'width=400,height=300')">window.open popup</button>
+    <form id="blank-form" action="page2.html" target="_blank"><input type="hidden" name="from" value="form-blank"><button>Form with target=_blank</button></form>
+  </section>
+
+  <section>
+    <h2>Form</h2>
+    <label>Name <input id="name" name="name" placeholder="Your name"></label>
+    <label>City
+      <select id="city"><option value="">Choose</option><option value="osl">Oslo</option><option value="ber">Bergen</option></select>
+    </label>
+    <label><input id="agree" type="checkbox"> I agree</label>
+    <textarea id="notes" aria-label="Notes"></textarea>
+    <button id="submit" onclick="report('submitted name=' + document.getElementById('name').value + ' city=' + document.getElementById('city').value + ' agree=' + document.getElementById('agree').checked)">Submit</button>
+  </section>
+
+  <section>
+    <h2>Dialogs</h2>
+    <button id="alert" onclick="alert('Hello from alert'); report('alert closed')">Alert</button>
+    <button id="confirm" onclick="report('confirm returned ' + confirm('Proceed?'))">Confirm</button>
+    <button id="prompt" onclick="report('prompt returned ' + prompt('Your city?', 'Oslo'))">Prompt</button>
+  </section>
+
+  <section>
+    <h2>Files</h2>
+    <input id="file" type="file" onchange="report('file chosen: ' + [...this.files].map(f => f.name + ' ' + f.size).join(', '))">
+    <button id="upload-button" onclick="document.getElementById('hidden-file').click()">Upload via button</button>
+    <input id="hidden-file" type="file" hidden onchange="report('hidden file chosen: ' + this.files[0]?.name)">
+    <a id="download" href="data:text/plain;charset=utf-8,agent-tabs%20download%20test" download="agent-tabs-test.txt">Download a file</a>
+  </section>
+
+  <section>
+    <h2>Pointer</h2>
+    <span id="hover-target">Hover me</span><span id="hover-tip">Tooltip visible</span>
+    <div id="drag" draggable="true">Drag me</div>
+    <div id="drop" aria-label="Drop zone">Drop here</div>
+    <button id="focus-check" onclick="report('hasFocus=' + document.hasFocus() + ' visibility=' + document.visibilityState)">Check focus</button>
+  </section>
+
+  <section>
+    <h2>Overlays</h2>
+    <div style="position: relative; display: inline-block">
+      <button id="styled" onclick="report('styled clicked')">Styled button</button>
+      <span style="position: absolute; inset: 0" onclick="this.previousElementSibling.click()"></span>
+    </div>
+    <button id="show-modal" onclick="document.getElementById('modal').hidden = false">Show modal overlay</button>
+    <button id="under-modal" onclick="report('under modal clicked')">Under modal</button>
+    <label class="chip"><input id="hidden-check" type="checkbox" style="position: absolute; opacity: 0; width: 0; height: 0" onchange="report('hidden checkbox ' + this.checked)"> Hidden checkbox</label>
+    <button onclick="report('search A')">Search</button>
+    <button onclick="report('search B')">Search</button>
+  </section>
+
+  <section>
+    <h2>SPA</h2>
+    <nav><a href="#/one" class="spa">Route one</a> · <a href="#/two" class="spa">Route two</a></nav>
+    <div id="route">Home route</div>
+    <button id="delayed" onclick="setTimeout(() => document.getElementById('route').textContent = 'Loaded later', 1500)">Load content after 1.5 s</button>
+    <button id="fetch" onclick="fetch('page2.html?slow=' + Date.now()).then(() => report('fetch done'))">Fetch</button>
+  </section>
+
+  <section>
+    <h2>Shadow DOM and iframe</h2>
+    <div id="shadow-host"></div>
+    <iframe title="Same-origin frame" src="frame.html" width="300" height="80"></iframe>
+  </section>
+
+  <div id="log" aria-live="polite">log:</div>
+  <div id="long"></div>
+
+  <div id="decor" style="position: fixed; inset: 0; pointer-events: none"></div>
+  <div id="modal" hidden style="position: fixed; inset: 0; background: rgba(0, 0, 0, .4)" onclick="this.hidden = true; report('modal closed')"></div>
+
+  <div id="consent" role="dialog" aria-label="Cookie consent">
+    We use cookies.
+    <button onclick="this.parentElement.remove(); report('consent rejected')">Reject all</button>
+    <button onclick="this.parentElement.remove(); report('consent accepted')">Accept all</button>
+  </div>
+
+  <script>
+    function report(message) {
+      document.getElementById('log').textContent += '\n' + message;
+    }
+    document.getElementById('drop').addEventListener('dragover', (e) => e.preventDefault());
+    document.getElementById('drop').addEventListener('drop', (e) => { e.preventDefault(); report('dropped'); });
+    document.getElementById('drop').addEventListener('mouseup', () => report('mouseup on drop zone'));
+    document.getElementById('hover-target').addEventListener('mouseenter', () => report('hovered'));
+    window.addEventListener('hashchange', () => {
+      document.getElementById('route').textContent = 'Route: ' + location.hash;
+    });
+    const shadow = document.getElementById('shadow-host').attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<button id="in-shadow">Shadow button</button>';
+    shadow.getElementById('in-shadow').addEventListener('click', () => report('shadow clicked'));
+    const long = document.getElementById('long');
+    for (let i = 1; i <= 2000; i++) {
+      const p = document.createElement('p');
+      p.textContent = 'Long page paragraph ' + i + (i === 2000 ? ' END-OF-LONG-PAGE' : '');
+      long.appendChild(p);
+    }
+  </script>
+</body>
+</html>

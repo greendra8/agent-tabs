@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>agent-tabs page 2</title></head>
+<body><h1>Page two</h1><p id="from"></p><a href="index.html">Back to fixture</a>
+<script>document.getElementById('from').textContent = 'Opened via: ' + (new URLSearchParams(location.search).get('from') || 'direct');</script>
+</body></html>

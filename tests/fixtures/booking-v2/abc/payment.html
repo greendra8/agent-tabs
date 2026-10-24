@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Payment | fixture</title></head>
+<body>
+  <!-- Modelled on vy.no's payment step: no card fields until a method is chosen. -->
+  <h1>Payment</h1>
+  <p>Total NOK 1,119</p>
+  <label><input type="radio" name="method"> Apple Pay</label>
+  <label><input type="radio" name="method"> Vipps</label>
+  <label><input type="radio" name="method"> Klarna</label>
+  <label><input type="radio" name="method"> Card</label>
+  <button onclick="document.getElementById('log').textContent += '\ncomplete payment clicked'">Complete payment</button>
+  <div id="log">log:</div>
+</body>
+</html>

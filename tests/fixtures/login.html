@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>agent-tabs login fixture</title></head>
+<body>
+  <h1>Sign in</h1>
+  <form id="login" onsubmit="event.preventDefault(); report('signed in as ' + email.value + ' with ' + password.value.length + '-char password')">
+    <label>Email <input id="email" type="email" autocomplete="username"></label>
+    <label>Password <input id="password" type="password" autocomplete="current-password"></label>
+    <button>Sign in</button>
+  </form>
+  <form id="otp" onsubmit="event.preventDefault(); report('otp ' + [...this.querySelectorAll('input')].map(i => i.value).join(''))">
+    <fieldset><legend>Verification code</legend>
+      <input maxlength="1" aria-label="Digit 1"><input maxlength="1" aria-label="Digit 2"><input maxlength="1" aria-label="Digit 3">
+      <input maxlength="1" aria-label="Digit 4"><input maxlength="1" aria-label="Digit 5"><input maxlength="1" aria-label="Digit 6">
+    </fieldset>
+    <button>Verify</button>
+  </form>
+  <button id="google" onclick="report('popup returned ' + Boolean(window.open('https://accounts.google.com/o/oauth2/v2/auth?client_id=test', 'signin', 'width=500,height=600')))">Sign in with Google</button>
+  <div id="log">log:</div>
+  <script>function report(m) { document.getElementById('log').textContent += '\n' + m; }</script>
+</body>
+</html>

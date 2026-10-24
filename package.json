@@ -1,0 +1,28 @@
+{
+  "name": "agent-tabs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Let several AI agents use your real, logged-in Chrome in background tabs without stealing focus: a Chrome extension plus a local MCP server",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "node broker/server.mjs",
+    "check": "node scripts/check.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "reload-extension": "pkill -USR2 -f 'agent-tabs/broker/server.mjs' && echo 'Reload requested'",
+    "cleanup-tabs": "curl -s -X POST -H \"Authorization: Bearer $(cat ~/.config/agent-tabs/token)\" http://127.0.0.1:47615/admin/cleanup-tabs && echo"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "ws": "8.22.0",
+    "zod": "4.6.7"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/greendra8/agent-tabs.git"
+  }
+}

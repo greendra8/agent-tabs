@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Agent Tabs",
+  "version": "1.0.0",
+  "description": "Lets local AI agents (via the agent-tabs MCP server) work in background tabs of this Chrome profile without taking focus.",
+  "minimum_chrome_version": "125",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwi1kD/mxpZPf5PyYGhFHeb6Pop5A+X0Rx2Q8EPzpK0Yozc973u1i0irtbeAiGsOOCx94KdwUOP+XnCf/A8td0TERxFKHdrMqE9Sn4TjAUejFEAtSgHf0AMy8829kbKAtaWEThqTIb4wj2M4CATV6Y6Qx0ktEX2kMZQ2OYsKxAaIeHNMoJtDIHOTOB7V0UXDUay8n53blFZ17IAYU42t7hhOx/YuJCVJEE4VrTXMs4d7iNnmq4f5guXE6Yl20scqzSzx2KALYspuOrjdAcYFlAJwy9OR8GMKe72k84/TO9UAYq/IU2FS1wHTJfPqytEq9H12jg+MgALeVPkc5txgaDQIDAQAB",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Agent Tabs",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "debugger",
+    "tabs",
+    "tabGroups",
+    "storage",
+    "alarms",
+    "webNavigation",
+    "downloads",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ]
+}
