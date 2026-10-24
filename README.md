@@ -132,7 +132,7 @@ Read this before installing. The extension has `debugger` and `<all_urls>` permi
 ```sh
 npm run check                  # syntax check, including the script injected into pages
 (cd tests/fixtures && python3 -m http.server 47699 --bind 127.0.0.1) &
-npm run test:e2e               # 39 end-to-end checks against the real extension
+npm run test:e2e               # 41 end-to-end checks against the real extension
 node tests/long-session.mjs    # survives an extension reload and a broker restart
 npm run reload-extension       # reload the extension after editing it
 npm run cleanup-tabs           # close agent-group tabs that no live agent owns
