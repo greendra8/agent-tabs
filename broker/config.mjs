@@ -19,6 +19,7 @@ const DEFAULTS = {
   // for agents that pause to think or write notes.
   idleMinutes: 60,
   window: "current", // "current": the last-focused window; "dedicated": one separate agent window
+  cursor: "auto", // the agent cursor: "auto" (Claude mark for Claude clients, else a neutral arrow), "claude" or "neutral"
   uploadRoots: [os.homedir(), "/tmp", "/private/tmp", "/private/var/folders"],
   bitwardenCommand: BW, // tests point this at tests/fake-bw.mjs
 };

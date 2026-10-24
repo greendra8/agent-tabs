@@ -153,6 +153,13 @@ function agentFor(sessionId, session) {
   return session.agentId;
 }
 
+// Which cursor the agent's tabs show: the Claude mark only for Claude clients (Claude Code sends
+// clientInfo.name "claude-code"), a neutral arrow for everyone else, unless the config picks one.
+function cursorStyle(client) {
+  if (config.cursor === "claude" || config.cursor === "neutral") return config.cursor;
+  return /claude/i.test(client) ? "claude" : "neutral";
+}
+
 function createSession() {
   const server = new McpServer({ name: "agent-tabs", version: VERSION }, { instructions: INSTRUCTIONS });
   let sessionId = null;
@@ -178,7 +185,7 @@ function createSession() {
     if (op === "open_tab" && args.label) session.label = args.label;
     const started = Date.now();
     try {
-      const result = await callExtension(agentId, op, args, timeoutMs, { pid: session.pid, label: session.label });
+      const result = await callExtension(agentId, op, args, timeoutMs, { pid: session.pid, label: session.label, cursor: cursorStyle(session.client) });
       logAction({ session: sessionId, label: session?.label, tool, args: logArgs, url: result?.url, ok: true, ms: Date.now() - started });
       return result;
     } catch (error) {

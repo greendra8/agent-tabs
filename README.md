@@ -4,7 +4,7 @@
 
 agent-tabs is a Chrome extension plus a small local MCP server that gives agents 27 `browser_*` tools. It has been tested with Claude Code (CLI and subagents). It's a standard Streamable HTTP MCP server, so other MCP clients should work, but they haven't been tried. Each agent works in its own collapsed tab group, sees only its own tabs, and never brings Chrome to the front unless you ask it to.
 
-> **Not affiliated with Anthropic.** This is an independent, unofficial project. The cursor uses the Claude logo; Claude and the Claude logo are trademarks of Anthropic.
+> **Not affiliated with Anthropic.** This is an independent, unofficial project. For Claude clients the cursor uses the Claude logo; Claude and the Claude logo are trademarks of Anthropic.
 >
 > **Unmaintained.** This was built for one person's setup and published as is. It works well on macOS with Chrome, but expect no support, releases or fixes. Fork it freely.
 
@@ -20,7 +20,7 @@ Most browser tools for agents either start a fresh browser with none of your log
 - **Signs in for you.** `browser_fill_login` fills username, password and authenticator codes from your Bitwarden vault. The agent never sees the password.
 - **Hands steps back to you.** When a site needs a 2-step code, a CAPTCHA or an approval, the agent keeps the tab, asks you, and continues once you're done.
 - **Guard rails.** Checkout and payment pages are detected and acting there needs explicit permission; optional site allow and deny lists; no cookie or storage reading; a local action log without page content.
-- **A visible cursor.** When you watch an agent's tab, an animated cursor shows what it clicks and types.
+- **A visible cursor.** When you watch an agent's tab, an animated cursor shows what it clicks and types: the Claude mark for Claude clients, a blue arrow for others.
 
 ![The cursor on a dark page](docs/images/cursor-dark.png)
 
@@ -97,6 +97,7 @@ The server also sends agents its own usage instructions over MCP: how to work qu
   "requireMcpToken": false,
   "idleMinutes": 60,
   "window": "current",
+  "cursor": "auto",
   "uploadRoots": ["~", "/tmp"]
 }
 ```
@@ -105,6 +106,7 @@ The server also sends agents its own usage instructions over MCP: how to work qu
 - **`paymentGuard`:** on pages with card fields, a payment provider's frame, or two of (checkout-style URL, pay button, payment-method choices), agents may read and navigate, but acting needs `allowPayment: true`. The tools tell agents to pass that only when you explicitly asked for the purchase.
 - **`requireMcpToken`:** MCP clients must send `Authorization: Bearer <token>` (the token is in `~/.config/agent-tabs/token`).
 - **`window`:** `"dedicated"` puts all agent tabs in one separate window instead of your current one.
+- **`cursor`:** `"auto"` shows the Claude mark for clients whose MCP `clientInfo.name` contains "claude" (Claude Code, Claude Desktop) and a neutral blue arrow for everything else; `"claude"` or `"neutral"` forces one for all clients.
 
 ## Security model
 

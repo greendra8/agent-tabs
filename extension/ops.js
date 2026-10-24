@@ -505,8 +505,8 @@ export const ops = {
   async handoff(sessionId, { tabId, reason, done = false }) {
     const st = await tabFor(sessionId, tabId, { allowDialog: true, allowBlockedPage: true });
     await sessions.setKept(tabId, !done);
-    const group = sessions.cursorLabel(tabId);
-    return result(st, done ? { handoff: "ended" } : { handoff: "waiting", tellUser: `Open the "agent: ${group}" tab group in Chrome and ${reason}` });
+    const group = sessions.groupTitleFor(tabId);
+    return result(st, done ? { handoff: "ended" } : { handoff: "waiting", tellUser: `Open the "${group}" tab group in Chrome and ${reason}` });
   },
 
   // The only operation that changes focus: for when the user asks to see a page.
@@ -621,9 +621,9 @@ async function showCursor(st, point, clicking = false) {
   const tab = await chrome.tabs.get(st.tabId).catch(() => null);
   const watched = Boolean(tab?.active);
   const duration = watched ? 260 : 0;
-  const label = sessions.cursorLabel(st.tabId);
-  st.cursor = { x: point.x, y: point.y, label };
-  await evaluate(st, page.moveAgentCursor, [point.x, point.y, clicking, duration, label]).catch(() => {});
+  const { style, label } = sessions.cursorFor(st.tabId);
+  st.cursor = { x: point.x, y: point.y, label, style };
+  await evaluate(st, page.moveAgentCursor, [point.x, point.y, clicking, duration, label, style]).catch(() => {});
   if (watched) await sleep(duration);
 }
 

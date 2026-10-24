@@ -6,7 +6,7 @@
 
 const GROUP_COLORS = ["blue", "cyan", "green", "orange", "pink", "purple", "red", "yellow", "grey"];
 
-let sessions = {}; // sessionId -> { label, groupId, colorIndex, pid }
+let sessions = {}; // sessionId -> { label, groupId, colorIndex, pid, cursor }
 let tabOwners = {}; // tabId -> sessionId
 let keptTabs = {}; // tabId -> true: left open when the session ends
 let windowMode = "current"; // "current" or "dedicated"
@@ -28,14 +28,14 @@ function save() {
   return chrome.storage.local.set({ sessions, tabOwners, keptTabs, dedicatedWindowId });
 }
 
-// Records the client process behind a session, so the broker can hand the session back to the
-// same client after it restarts.
-export async function noteClient(sessionId, { pid, label } = {}) {
-  if (!sessionId || !pid) return;
+// Records the client behind a session: its process, so the broker can hand the session back to the
+// same client after it restarts, and which cursor its tabs show ("claude" or "neutral").
+export async function noteClient(sessionId, { pid, label, cursor } = {}) {
+  if (!sessionId || !(pid || cursor)) return;
   const session = (sessions[sessionId] ??= newSession());
-  if (session.pid === pid && (!label || session.label)) return;
-  session.pid = pid;
-  if (label && !session.label) session.label = label.slice(0, 40);
+  const next = { pid: pid ?? session.pid, label: session.label || label?.slice(0, 40) || "", cursor: cursor ?? session.cursor };
+  if (next.pid === session.pid && next.label === session.label && next.cursor === session.cursor) return;
+  Object.assign(session, next);
   await save();
 }
 
@@ -61,9 +61,16 @@ export function ownedTabIds(sessionId) {
     .map(([tabId]) => Number(tabId));
 }
 
-// The name shown on the agent's cursor.
-export function cursorLabel(tabId) {
-  return sessions[tabOwners[tabId]]?.label || "Claude";
+// How the agent's cursor looks in a tab: the Claude mark or a neutral arrow, with the agent's name.
+export function cursorFor(tabId) {
+  const session = sessions[tabOwners[tabId]];
+  const style = session?.cursor === "neutral" ? "neutral" : "claude";
+  return { style, label: session?.label || (style === "claude" ? "Claude" : "Agent") };
+}
+
+// The title of the tab group a tab is in, for telling the user where to look.
+export function groupTitleFor(tabId) {
+  return groupTitle(sessions[tabOwners[tabId]] ?? {});
 }
 
 export function isKept(tabId) {

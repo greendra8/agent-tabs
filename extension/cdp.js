@@ -317,8 +317,8 @@ async function handleEvent(st, sessionId, method, params) {
         st.domContentCount++;
         // A new document starts without the agent cursor; put it back where it was.
         if (st.cursor) {
-          const { x, y, label } = st.cursor;
-          await send(st.tabId, "Runtime.evaluate", { expression: `(${moveAgentCursor})(${x}, ${y}, false, 0, ${JSON.stringify(label)})` }).catch(() => {});
+          const { x, y, label, style } = st.cursor;
+          await send(st.tabId, "Runtime.evaluate", { expression: `(${moveAgentCursor})(${x}, ${y}, false, 0, ${JSON.stringify(label)}, ${JSON.stringify(style)})` }).catch(() => {});
         }
       }
       return;
