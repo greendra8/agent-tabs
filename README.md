@@ -32,7 +32,7 @@ AI agent ──MCP over HTTP──▶ broker (Node, 127.0.0.1:47615) ──WebSo
 
 - The **extension** (Manifest V3) drives tabs through the Chrome DevTools Protocol. It turns on focus emulation on every tab it attaches to, so hidden pages behave as if focused. It injects a small script that turns popups into background tabs, and takes screenshots with CDP rather than `captureVisibleTab`.
 - The **broker** is an MCP server. Each MCP session is one agent: its id travels with every operation, so the extension can keep agents apart. Sessions survive broker restarts and extension reloads; a reconnecting client gets its tabs back.
-- Tabs close when an agent's process exits, or after 60 minutes idle. Tabs handed to you are kept.
+- Tabs close when an agent's process exits, or after 20 minutes idle. A tab handed to you stays open until 30 minutes after its agent ends; tabs an agent kept with `browser_keep_tab` stay until you close them.
 
 ## Tools
 
@@ -95,7 +95,7 @@ The server also sends agents its own usage instructions over MCP: how to work qu
   "allow": [],
   "paymentGuard": true,
   "requireMcpToken": false,
-  "idleMinutes": 60,
+  "idleMinutes": 20,
   "window": "current",
   "cursor": "auto",
   "uploadRoots": ["~", "/tmp"]
@@ -132,7 +132,7 @@ Read this before installing. The extension has `debugger` and `<all_urls>` permi
 ```sh
 npm run check                  # syntax check, including the script injected into pages
 (cd tests/fixtures && python3 -m http.server 47699 --bind 127.0.0.1) &
-npm run test:e2e               # 41 end-to-end checks against the real extension
+npm run test:e2e               # 42 end-to-end checks against the real extension
 node tests/long-session.mjs    # survives an extension reload and a broker restart
 npm run reload-extension       # reload the extension after editing it
 npm run cleanup-tabs           # close agent-group tabs that no live agent owns

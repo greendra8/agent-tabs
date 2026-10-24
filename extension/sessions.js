@@ -8,24 +8,28 @@ const GROUP_COLORS = ["blue", "cyan", "green", "orange", "pink", "purple", "red"
 
 let sessions = {}; // sessionId -> { label, groupId, colorIndex, pid, cursor }
 let tabOwners = {}; // tabId -> sessionId
-let keptTabs = {}; // tabId -> true: left open when the session ends
+let keptTabs = {}; // tabId -> true (browser_keep_tab) or "handoff": left open when the session ends
+let expiringTabs = {}; // tabId -> time: handed-off tabs whose agent has ended, closed at this time
+const HANDOFF_GRACE_MS = 30 * 60000; // long enough to finish a sign-in step the agent handed over
 let windowMode = "current"; // "current" or "dedicated"
 let dedicatedWindowId = null;
 
-export const ready = chrome.storage.local.get(["sessions", "tabOwners", "keptTabs", "dedicatedWindowId"]).then(async (saved) => {
+export const ready = chrome.storage.local.get(["sessions", "tabOwners", "keptTabs", "expiringTabs", "dedicatedWindowId"]).then(async (saved) => {
   sessions = saved.sessions ?? {};
   tabOwners = saved.tabOwners ?? {};
   keptTabs = saved.keptTabs ?? {};
+  expiringTabs = saved.expiringTabs ?? {};
   dedicatedWindowId = saved.dedicatedWindowId ?? null;
   // Tab ids don't survive a browser restart; forget tabs that no longer exist.
   const open = new Set((await chrome.tabs.query({})).map((tab) => tab.id));
   for (const tabId of Object.keys(tabOwners)) if (!open.has(Number(tabId))) delete tabOwners[tabId];
   for (const tabId of Object.keys(keptTabs)) if (!open.has(Number(tabId))) delete keptTabs[tabId];
+  for (const tabId of Object.keys(expiringTabs)) if (!open.has(Number(tabId))) delete expiringTabs[tabId];
   await save();
 });
 
 function save() {
-  return chrome.storage.local.set({ sessions, tabOwners, keptTabs, dedicatedWindowId });
+  return chrome.storage.local.set({ sessions, tabOwners, keptTabs, expiringTabs, dedicatedWindowId });
 }
 
 // Records the client behind a session: its process, so the broker can hand the session back to the
@@ -77,8 +81,9 @@ export function isKept(tabId) {
   return Boolean(keptTabs[tabId]);
 }
 
-export async function setKept(tabId, keep) {
-  if (keep) keptTabs[tabId] = true;
+// handoff: kept only while the user may still be working in it (see HANDOFF_GRACE_MS).
+export async function setKept(tabId, keep, { handoff = false } = {}) {
+  if (keep) keptTabs[tabId] = handoff ? "handoff" : true;
   else delete keptTabs[tabId];
   await save();
 }
@@ -188,6 +193,7 @@ export async function endSession(sessionId, releaseTab) {
   const closing = tabIds.filter((id) => !keptTabs[id]);
   for (const tabId of kept) {
     await releaseTab(tabId).catch(() => {});
+    if (keptTabs[tabId] === "handoff") expiringTabs[tabId] = Date.now() + HANDOFF_GRACE_MS;
     delete tabOwners[tabId];
     delete keptTabs[tabId];
   }
@@ -212,4 +218,14 @@ async function retryTabEdit(edit) {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
+}
+
+// Closes handed-off tabs whose agent ended more than HANDOFF_GRACE_MS ago (run every 30 s).
+export async function closeExpiredTabs() {
+  await ready;
+  const due = Object.keys(expiringTabs).filter((tabId) => expiringTabs[tabId] <= Date.now()).map(Number);
+  if (!due.length) return;
+  for (const tabId of due) delete expiringTabs[tabId];
+  await save();
+  await chrome.tabs.remove(due).catch(() => {}); // the user may have closed them already
 }

@@ -137,16 +137,25 @@ const sessions = new Map(); // MCP session id -> { transport, lastActivity, labe
 const orphans = new Map(); // agent id -> { pid, label, since }: agents waiting to be adopted
 
 // The agent a session acts as, decided at its first tool call: an orphan from the same client
-// process when there is exactly one, else the session itself.
+// process when there is exactly one; else the agent another session from the same client process
+// already adopted (Claude Code opens two sessions when it reconnects after a broker restart, and
+// may adopt on one and carry on with the other); else the session itself.
 function agentFor(sessionId, session) {
   if (session.agentId) return session.agentId;
   const candidates = session.pid ? [...orphans].filter(([, orphan]) => orphan.pid === session.pid) : [];
+  const sibling = session.pid
+    ? [...sessions].find(([id, other]) => id !== sessionId && other.pid === session.pid && other.client === session.client && other.agentId && other.agentId !== id)
+    : undefined;
   if (candidates.length === 1) {
     const [agentId, orphan] = candidates[0];
     orphans.delete(agentId);
     session.agentId = agentId;
     session.label ||= orphan.label;
     logEvent("session_adopted", { session: sessionId.slice(0, 8), agent: agentId.slice(0, 8), label: orphan.label });
+  } else if (sibling) {
+    session.agentId = sibling[1].agentId;
+    session.label ||= sibling[1].label;
+    logEvent("session_adopted", { session: sessionId.slice(0, 8), agent: session.agentId.slice(0, 8), label: session.label, via: "sibling session" });
   } else {
     session.agentId = sessionId;
   }
@@ -311,9 +320,10 @@ const httpServer = http.createServer((req, res) => {
       res.writeHead(403).end();
       return;
     }
-    callExtension("admin", "cleanup_tabs", {}, 30000).then(
+    const dryRun = new URL(req.url, `http://${HOST}`).searchParams.has("dryRun");
+    callExtension("admin", "cleanup_tabs", { dryRun }, 30000).then(
       (outcome) => {
-        logEvent("tabs_cleaned_up", outcome);
+        if (!dryRun) logEvent("tabs_cleaned_up", outcome);
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify(outcome));
       },

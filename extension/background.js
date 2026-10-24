@@ -166,6 +166,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 chrome.alarms.create("reconnect", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(connect);
+chrome.alarms.onAlarm.addListener(() => sessions.closeExpiredTabs());
 chrome.runtime.onStartup.addListener(connect);
 chrome.runtime.onInstalled.addListener(connect);
 connect();

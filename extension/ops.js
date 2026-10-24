@@ -128,6 +128,10 @@ export const ops = {
       clip = { x: 0, y: 0, width: content.width, height: Math.min(content.height, 7900) };
       beyondViewport = true;
     }
+    // Sticky and fixed headers are drawn where the page is scrolled to, over the content in the
+    // middle of a full-page capture; from the top they sit where they belong.
+    const scrolledBack = fullPage && !node && !st.dialog && (viewport.pageX || viewport.pageY);
+    if (scrolledBack) await scrollPageTo(st, 0, 0);
     // The agent cursor is for people watching the tab; keep it out of the agent's own screenshots.
     const hideCursor = st.cursor && !st.dialog;
     if (hideCursor) await evaluate(st, page.setAgentCursorHidden, [true]).catch(() => {});
@@ -137,7 +141,10 @@ export const ops = {
       "Page.captureScreenshot",
       { format, ...(format === "jpeg" ? { quality } : {}), clip: { ...clip, scale: node ? 1 : 1 / ratio } /* element clips with a scale below 1 come back magnified, so they stay at device resolution */, captureBeyondViewport: beyondViewport, fromSurface: true },
       { timeoutMs: 30000 },
-    ).finally(() => hideCursor && evaluate(st, page.setAgentCursorHidden, [false]).catch(() => {}));
+    ).finally(async () => {
+      if (hideCursor) await evaluate(st, page.setAgentCursorHidden, [false]).catch(() => {});
+      if (scrolledBack) await scrollPageTo(st, viewport.pageX, viewport.pageY);
+    });
     const tab = await chrome.tabs.get(tabId);
     return { data, mimeType: `image/${format}`, width: Math.round(clip.width), height: Math.round(clip.height), url: cdp.shortUrl(tab.url), title: tab.title, notes: takeNotes(st) };
   },
@@ -506,12 +513,21 @@ export const ops = {
   },
 
   // Hands a step to the user (2-step code, CAPTCHA, approval): keeps the tab open even if the agent's
-  // session ends. The agent then asks the user and waits for the page to move on.
+  // session ends, and detaches the debugger while the user works in it, so the page sees a plain
+  // browser while a person does the step. (It didn't get Calm's PerimeterX press-and-hold check to
+  // pass, which may flag the tab or profile earlier.) The agent's next call attaches again.
   async handoff(sessionId, { tabId, reason, done = false }) {
     const st = await tabFor(sessionId, tabId, { allowDialog: true, allowBlockedPage: true });
-    await sessions.setKept(tabId, !done);
+    await sessions.setKept(tabId, !done, { handoff: true });
+    if (done) return result(st, { handoff: "ended" });
     const group = sessions.groupTitleFor(tabId);
-    return result(st, done ? { handoff: "ended" } : { handoff: "waiting", tellUser: `Open the "${group}" tab group in Chrome and ${reason}` });
+    const out = await result(st, {
+      handoff: "waiting",
+      tellUser: `Open the "${group}" tab group in Chrome and ${reason}`,
+      agentNote: "The tab is released from automation while the user works in it. Don't call any tool on this tab until the user says they're done; then call browser_handoff with done: true and take a new snapshot (refs reset). If they say a check keeps failing, ask them to reload the page and try again.",
+    });
+    await cdp.detach(tabId);
+    return out;
   },
 
   // The only operation that changes focus: for when the user asks to see a page.
@@ -531,11 +547,21 @@ export const ops = {
 
   // Admin (npm run cleanup-tabs): closes tabs in agent tab groups that no live agent owns, such as
   // kept tabs and tabs left behind by crashes. Tabs a live agent owns are left alone.
-  async cleanup_tabs() {
+  // With dryRun, only lists the agent-group tabs and what would happen to them.
+  async cleanup_tabs(_sessionId, { dryRun = false } = {}) {
     const groups = await chrome.tabGroups.query({});
-    const agentGroups = new Set(groups.filter((group) => /^agent\b/.test(group.title ?? "")).map((group) => group.id));
-    const tabs = (await chrome.tabs.query({})).filter((tab) => agentGroups.has(tab.groupId));
+    const groupTitles = new Map(groups.filter((group) => /^agent\b/.test(group.title ?? "")).map((group) => [group.id, group.title]));
+    const tabs = (await chrome.tabs.query({})).filter((tab) => groupTitles.has(tab.groupId));
     const closing = tabs.filter((tab) => !sessions.ownerOf(tab.id)).map((tab) => tab.id);
+    if (dryRun) {
+      return {
+        tabs: tabs.map((tab) => ({
+          group: groupTitles.get(tab.groupId),
+          page: cdp.shortUrl(tab.url),
+          state: closing.includes(tab.id) ? "no live agent (would close)" : sessions.isKept(tab.id) ? "kept for the user" : "owned by an agent",
+        })),
+      };
+    }
     if (closing.length) await chrome.tabs.remove(closing);
     for (const tabId of closing) {
       cdp.dropState(tabId);
@@ -618,6 +644,12 @@ async function guardPayment(st, allowPayment) {
   if (signals.length) {
     throw new Error(`This looks like a checkout or payment page (${signals.join(", ")}). You can read it, take screenshots or navigate away, but clicking or typing here needs allowPayment: true, which you may only pass if the user explicitly asked you to make this purchase or payment.`);
   }
+}
+
+// Scrolls the page instantly, ignoring CSS smooth scrolling. (No waiting for a frame: hidden tabs
+// don't run requestAnimationFrame, and the capture renders a fresh frame anyway.)
+async function scrollPageTo(st, x, y) {
+  await evaluate(st, (left, top) => window.scrollTo({ left, top, behavior: "instant" }), [x, y]).catch(() => {});
 }
 
 // Moves the visible agent cursor to a point (main-frame viewport coordinates). It only animates,

@@ -144,6 +144,7 @@ await check("browser_handoff keeps the tab and says where to go", async () => {
   await agent.call("browser_handoff", { tabId, reason: "", done: true });
   const read = await agent.call("browser_batch", { tabId, steps: [{ action: "get_text", selector: "h1" }] });
   assert(read.data.steps[0].text?.includes("agent-tabs fixture"), JSON.stringify(read.data.steps));
+  await snapshotRefs(); // the handoff released the tab, which resets refs (the user may have changed the page)
 });
 
 await check("press: select all + Backspace clears the field", async () => {
@@ -437,6 +438,7 @@ await check("payment guard: checkout page is flagged; acting needs allowPayment"
 
 await check("SPA back/forward returns promptly", async () => {
   await agent.call("browser_navigate", { tabId, url: FIXTURE });
+  await agent.call("browser_handle_cookie_banner", { tabId }); // in a short window it covers the links
   await agent.call("browser_click", { tabId, text: "Route one", exact: true });
   await agent.call("browser_click", { tabId, text: "Route two", exact: true });
   const started = Date.now();
@@ -461,6 +463,17 @@ await check("keep_tab toggles", async () => {
   const kept = await agent.call("browser_keep_tab", { tabId });
   const unkept = await agent.call("browser_keep_tab", { tabId, keep: false });
   assert(kept.data.kept === true && unkept.data.kept === false, "keep flags wrong");
+});
+
+await check("full-page screenshot of a scrolled page keeps the scroll position", async () => {
+  const { data } = await agent.call("browser_open_tab", { url: FIXTURE.replace("index.html", "sticky.html") });
+  await agent.call("browser_scroll", { tabId: data.tabId, text: "Departure 25" });
+  const before = await agent.call("browser_evaluate", { tabId: data.tabId, expression: "scrollY" });
+  const shot = await agent.call("browser_screenshot", { tabId: data.tabId, fullPage: true });
+  assert(shot.images.length === 1, "no image");
+  const after = await agent.call("browser_evaluate", { tabId: data.tabId, expression: "scrollY" });
+  assert(Number(before.data.result) > 1000 && after.data.result === before.data.result, `scrollY ${before.data.result} -> ${after.data.result}`);
+  await agent.call("browser_close_tab", { tabId: data.tabId });
 });
 
 await check("close_tab closes a page with a \"Leave site?\" prompt", async () => {

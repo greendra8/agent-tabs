@@ -30,13 +30,19 @@ async function healthy() {
 }
 
 let agent = await connectAgent("long-session");
-// Like Claude Code: if the broker no longer knows the session, start a new one and retry once.
+const spareSessions = [];
+// Like Claude Code: if the broker no longer knows the session, reconnect and retry once. Claude
+// Code opens two sessions when it reconnects and may make its first call on one and carry on with
+// the other, so this does the same.
 async function call(tool, args) {
   try {
     return await agent.call(tool, args);
   } catch (error) {
     if (!/404|Unknown MCP session|session/i.test(error.message)) throw error;
-    log(`session lost (${error.message.slice(0, 60)}); reconnecting`);
+    log(`session lost (${error.message.slice(0, 60)}); reconnecting with two sessions`);
+    const first = await connectAgent("long-session");
+    spareSessions.push(first);
+    await first.call("browser_list_tabs", {});
     agent = await connectAgent("long-session");
     return agent.call(tool, args);
   }
@@ -88,5 +94,6 @@ while (Date.now() + pauseMs < deadline) {
 
 await call("browser_close_tab", { tabId });
 await agent.close();
+for (const spare of spareSessions) await spare.close();
 log(failures.length ? `FAILED ${failures.length}/${step}: ${failures.join(" | ")}` : `passed ${step}/${step} checkpoints in ${Math.round((Date.now() - started) / 60000)} min`);
 process.exit(failures.length ? 1 : 0);

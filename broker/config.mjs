@@ -15,9 +15,9 @@ const DEFAULTS = {
   paymentGuard: true, // on checkout/payment pages, acting needs allowPayment (see README)
   requireMcpToken: false, // true: MCP clients must send "Authorization: Bearer <token>" (see README)
   // Close an agent's tabs after this long without a tool call. Some hosts keep a finished
-  // subagent's process alive, so this (not process exit) is what cleans up after it. Long enough
-  // for agents that pause to think or write notes.
-  idleMinutes: 60,
+  // subagent's process alive, so this (not process exit) is what cleans up after it. Real agents'
+  // longest pause between calls was under 5 minutes; tabs handed to the user are kept anyway.
+  idleMinutes: 20,
   window: "current", // "current": the last-focused window; "dedicated": one separate agent window
   cursor: "auto", // the agent cursor: "auto" (Claude mark for Claude clients, else a neutral arrow), "claude" or "neutral"
   uploadRoots: [os.homedir(), "/tmp", "/private/tmp", "/private/var/folders"],
